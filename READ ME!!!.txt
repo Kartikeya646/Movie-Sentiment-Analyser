@@ -1,2 +1,0 @@
-Go to this location in cmd and then type node server.js
-Then run the html file.

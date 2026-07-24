@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<!-- Set to dark mode by default -->
+<html lang="en" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Movie Review Classifier</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+        .fade-out {
+            animation: fadeOut 0.5s ease-in forwards;
+        }
+        /* Simple loading spinner (Dark version) */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+            animation: spin 1s linear infinite;
+        }
+         /* Smaller spinner for plot translation */
+        .spinner-xs {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 0.75rem; /* h-3 w-3 */
+            height: 0.75rem;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+        .spinner-light {
+             /* This spinner is for the white text on the button */
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 1.25rem; /* h-5 w-5 */
+            height: 1.25rem;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Custom scrollbar (Dark version) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #374151; /* gray-700 */
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #6b7280; /* gray-500 */
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af; /* gray-400 */
+        }
+
+        /* Autocomplete styles */
+        #autocomplete-list {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%; 
+            z-index: 10;
+            overflow: hidden;
+            margin-top: 0.5rem; 
+            background-color: #4b5563; /* gray-600 */
+            border-radius: 0.5rem; 
+            border: 1px solid #374151; /* border-gray-700 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+        }
+        .autocomplete-item {
+            padding: 0.75rem 1rem; 
+            color: #d1d5db; /* text-gray-300 */
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+        .autocomplete-item:hover {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: #ffffff; /* text-white */
+        }
+        .autocomplete-item:first-child {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        .autocomplete-item:last-child {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        /* Tab styles (Dark version) */
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #9ca3af; /* gray-400 */
+        }
+        .tab-button:not(.active):hover {
+            color: #f3f4f6; /* gray-100 */
+        }
+        .tab-button.active {
+            color: white !important;
+            background-color: #3b82f6; /* blue-500 */
+        }
+
+        /* Results Tab styles */
+        .results-tab-button {
+            padding: 0.75rem 1.5rem;
+            border-bottom-width: 3px;
+            border-color: transparent;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #9ca3af; /* gray-400 */
+        }
+        .results-tab-button:hover {
+            color: #d1d5db; /* gray-300 */
+        }
+        .results-tab-button.active {
+            color: #3b82f6; /* blue-500 */
+            border-color: #3b82f6; /* blue-500 */
+        }
+
+        /* Custom Language Dropdown Styles */
+        #language-dropdown-panel {
+            position: absolute;
+            z-index: 20;
+            margin-top: 0.25rem;
+            background-color: #4b5563; /* gray-600 */
+            border-radius: 0.5rem;
+            border: 1px solid #374151; /* border-gray-700 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            padding: 0.75rem; 
+            max-height: 300px;
+            overflow-y: auto;
+            min-width: 500px; /* Increased minimum width */
+        }
+        .language-option {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: #d1d5db; /* text-gray-300 */
+            cursor: pointer;
+            border-radius: 0.25rem;
+            transition: background-color 0.15s ease-in-out;
+            white-space: nowrap;
+        }
+        .language-option:hover {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: #ffffff; /* text-white */
+        }
+        .language-option.selected {
+             background-color: #1d4ed8; /* bg-blue-700 */
+             color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4">
+
+    <!-- Main Application Container -->
+    <div id="app" class="w-full max-w-4xl mx-auto mt-10 sm:mt-16 bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-10 border border-transparent">
+
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500" data-lang-key="main_title">
+                AI Movie Review Classifier
+            </h1>
+            <p id="header-subtitle" class="text-gray-400 mt-2" data-lang-key="subtitle_search">
+                Search for a movie or analyze your own review text.
+            </p>
+        </header>
+
+        <!-- Custom Language Selector -->
+        <div class="flex justify-center mb-6">
+            <div class="relative inline-block text-left">
+                <label class="text-sm font-medium text-gray-400 mr-2" data-lang-key="results_language_label">Results Language:</label>
+                <button type="button" id="language-dropdown-button" class="inline-flex justify-center w-full rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500" aria-haspopup="true" aria-expanded="false">
+                    English
+                    <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div id="language-dropdown-panel" class="hidden origin-top-right custom-scrollbar">
+                    <div class="grid grid-cols-3 gap-4"> <!-- Increased gap -->
+                        <!-- Language options will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Box (replaces alerts) -->
+        <div id="message-box" class="hidden rounded-lg p-4 text-center mb-6 text-white"></div>
+
+        <!-- ========= SCREEN 1: Input ========= -->
+        <div id="input-screen" class="fade-in">
+            
+            <!-- Tab Navigation -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="tab-search" class="tab-button active" onclick="switchTab('search')" data-lang-key="tab_search">Search Movie</button>
+                <button id="tab-custom" class="tab-button" onclick="switchTab('custom')" data-lang-key="tab_custom">Analyze Custom Text</button>
+            </div>
+
+            <!-- Tab Content: Movie Search -->
+            <div id="search-container">
+                <div class="relative"> <!-- Parent for autocomplete positioning -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="movie-search-input" class="flex-grow bg-gray-700 border border-gray-600 rounded-lg p-4 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Oppenheimer, Jawan, Dune..." oninput="handleAutocomplete()" onkeydown="if(event.key==='Enter') handleSearch()">
+                        <button onclick="handleSearch()" id="search-button" class="flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center min-w-[150px] h-[58px]">
+                            <span id="search-button-text" data-lang-key="button_analyze">Analyze</span>
+                            <div id="search-button-spinner" class="spinner-light hidden"></div>
+                        </button>
+                    </div>
+                    <!-- Autocomplete Dropdown -->
+                    <div id="autocomplete-list">
+                        <!-- Suggestions will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Custom Text -->
+            <div id="custom-container" class="hidden space-y-4">
+                <textarea id="review-text" rows="8" class="block w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:ring-purple-500 focus:border-purple-500" data-lang-key="placeholder_custom_review"></textarea>
+                <button onclick="handleCustomAnalysis()" id="custom-analyze-button" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center min-h-[48px]">
+                    <span id="custom-button-text" data-lang-key="button_analyze_my_review">Analyze My Review</span>
+                    <div id="custom-button-spinner" class="spinner-light hidden"></div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- ========= SCREEN 2: Results ========= -->
+        <div id="results-screen" class="hidden fade-in">
+            <button onclick="showInputScreen()" class="mb-6 text-sm text-blue-400 hover:text-blue-300" data-lang-key="button_back_to_search">&larr; Back to Search</button>
+
+            <!-- Movie Info Section (Hidden for custom reviews) -->
+            <div id="movie-info-section" class="flex flex-col md:flex-row gap-8 mb-8">
+                <!-- Left: Poster -->
+                <div class="flex-shrink-0 w-full md:w-1/3">
+                    <img id="movie-poster" src="https://placehold.co/500x750/374151/4b5563?text=Loading..." alt="Movie Poster" class="rounded-xl shadow-2xl w-full">
+                </div>
+                <!-- Right: Details -->
+                <div class="flex-grow md:w-2/3">
+                    <h2 id="movie-title" class="text-4xl font-bold mb-2">Movie Title (Year)</h2>
+                    
+                    <!-- Ratings -->
+                    <div class="flex flex-wrap gap-4 my-4">
+                        <div id="ratings-container" class="flex flex-wrap gap-4"></div>
+                    </div>
+                    
+                    <!-- Plot -->
+                    <h3 class="text-xl font-semibold mb-2 text-gray-300">
+                        <span data-lang-key="plot_summary">Plot Summary</span>
+                        <span id="plot-loading-spinner" class="spinner-xs hidden"></span>
+                    </h3>
+                    <p id="movie-plot" class="text-gray-400 leading-relaxed max-h-48 overflow-y-auto custom-scrollbar"></p>
+                </div>
+            </div>
+
+            <!-- AI Analysis Section (Always shown) -->
+            <div id="ai-analysis-section">
+                
+                <!-- AI Analysis Tab Navigation -->
+                <div class="border-b border-gray-700 mb-6">
+                    <nav class="flex -mb-px" aria-label="Tabs">
+                        <button id="results-tab-user" class="results-tab-button" onclick="switchResultsTab('user')" data-lang-key="tab_user_sentiment">
+                            User Sentiment
+                        </button>
+                        <button id="results-tab-critical" class="results-tab-button" onclick="switchResultsTab('critical')" data-lang-key="tab_critical_consensus">
+                            Critical Consensus
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Panel for User Sentiment (from TMDB) -->
+                <div id="user-sentiment-panel">
+                    <!-- Loading State -->
+                    <div id="user-loading-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-lg text-gray-300" data-lang-key="loading_user_reviews">AI is analyzing 1,000+ user reviews... This may take a moment.</p>
+                    </div>
+                    
+                    <!-- Error/Empty State -->
+                    <div id="user-error-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <p class="text-lg text-gray-400" data-lang-key="error_no_user_reviews">No user reviews were found on TMDB.</p>
+                    </div>
+
+                    <!-- Results Content -->
+                    <div id="user-results-content" class="hidden">
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                            <!-- Left: Chart -->
+                            <div class="lg:col-span-2 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-gray-400 mb-4 text-center" data-lang-key="sentiment_breakdown">Sentiment Breakdown</h3>
+                                <div class="w-full max-w-xs mx-auto">
+                                    <canvas id="user-review-chart"></canvas>
+                                </div>
+                                <p id="user-review-count-info" class="text-center text-gray-500 text-sm mt-4"></p>
+                            </div>
+
+                            <!-- Right: Summary & Pointers -->
+                            <div class="lg:col-span-3 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="ai_summary">AI-Generated Summary</h3>
+                                    <p id="user-ai-summary" class="text-gray-300 leading-relaxed"></p>
+                                </div>
+                                <div class="mt-6">
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="key_aspects">Key Aspects</h3>
+                                    <ul id="user-pointers-list" class="space-y-3">
+                                        <!-- Pointers will be injected here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab Panel for Critical Consensus (from Google Search) -->
+                <div id="critical-sentiment-panel" class="hidden">
+                    <!-- Initial State: Button to run search -->
+                    <div id="critical-initial-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <p class="text-lg text-gray-300 mb-6" data-lang-key="prompt_deep_search">Run an AI-powered Google search to find the critical consensus for this movie.</p>
+                        <button id="deep-search-button" onclick="triggerAiDeepSearch()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center min-h-[48px] mx-auto">
+                            <span id="deep-search-button-text" data-lang-key="button_deep_search">Run AI Deep Search</span>
+                            <div id="deep-search-button-spinner" class="spinner-light hidden"></div>
+                        </button>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="critical-loading-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-lg text-gray-300" data-lang-key="loading_deep_search">AI is searching Google for reviews... This may take a moment.</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="critical-error-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <p class="text-lg text-red-400" data-lang-key="error_deep_search">AI Deep Search failed. Please try again.</p>
+                    </div>
+                    
+                    <!-- Results Content -->
+                    <div id="critical-results-content" class="hidden">
+                         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                            <!-- Left: Chart -->
+                            <div class="lg:col-span-2 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-gray-400 mb-4 text-center" data-lang-key="sentiment_breakdown_2">Sentiment Breakdown</h3>
+                                <div class="w-full max-w-xs mx-auto">
+                                    <canvas id="critical-review-chart"></canvas>
+                                </div>
+                                <p id="critical-review-count-info" class="text-center text-gray-500 text-sm mt-4"></p>
+                            </div>
+
+                            <!-- Right: Summary & Pointers -->
+                            <div class="lg:col-span-3 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="ai_summary_2">AI-Generated Summary</h3>
+                                    <p id="critical-ai-summary" class="text-gray-300 leading-relaxed"></p>
+                                </div>
+                                <div class="mt-6">
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="key_aspects_2">Key Aspects</h3>
+                                    <ul id="critical-pointers-list" class="space-y-3">
+                                        <!-- Pointers will be injected here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- This section is for CUSTOM TEXT ONLY -->
+                <div id="custom-text-panel" class="hidden">
+                    <!-- Loading State -->
+                    <div id="custom-loading-state" class="hidden text-center p-8 bg-gray-700 rounded-xl">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-lg text-gray-300" data-lang-key="loading_custom_review">AI is analyzing your review...</p>
+                    </div>
+                    <!-- Results Content -->
+                    <div id="custom-results-content" class="hidden">
+                         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                            <div class="lg:col-span-2 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-gray-400 mb-4 text-center" data-lang-key="sentiment_breakdown_3">Sentiment Breakdown</h3>
+                                <div class="w-full max-w-xs mx-auto">
+                                    <canvas id="custom-review-chart"></canvas>
+                                </div>
+                                <p id="custom-review-count-info" class="text-center text-gray-500 text-sm mt-4"></p>
+                            </div>
+                            <div class="lg:col-span-3 bg-gray-700 p-6 rounded-xl shadow-lg">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="ai_summary_3">AI-Generated Summary</h3>
+                                    <p id="custom-ai-summary" class="text-gray-300 leading-relaxed"></p>
+                                </div>
+                                <div class="mt-6">
+                                    <h3 class="text-xl font-semibold mb-3" data-lang-key="key_aspects_3">Key Aspects</h3>
+                                    <ul id="custom-pointers-list" class="space-y-3"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- API Configuration ---
+        const BACKEND_URL = 'http://localhost:3000'; 
+        
+        const GEMINI_API_KEY = "AIzaSyAvO8O5thnKjB76DxKSXB1lBdOo1mrITgo"; // <-- MAKE SURE THIS IS ADDED!
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+        
+        // --- Global State ---
+        let chartInstances = {
+            user: null,
+            critical: null,
+            custom: null
+        };
+        let messageTimer = null;
+        let autocompleteTimer = null;
+        let currentMovieTitle = null; // Store movie title for deep search
+        let currentMovieData = null; // Store all movie data for re-analysis
+        let currentCustomReview = null; // Store custom review for re-analysis
+        let currentLanguage = 'English'; // Store selected language
+        let plotTranslationCache = {}; // Cache for plot translations
+        let isDropdownOpen = false;
+
+        // --- Language Data ---
+        const languages = [
+            { code: "English", name: "English" },
+            { code: "Hindi", name: "Hindi (हिन्दी)" },
+            { code: "Assamese", name: "Assamese (অসমীয়া)" },
+            { code: "Bengali", name: "Bengali (বাংলা)" },
+            { code: "Bodo", name: "Bodo (बोड़ो)" },
+            { code: "Dogri", name: "Dogri (डोगरी)" },
+            { code: "Gujarati", name: "Gujarati (ગુજરાતી)" },
+            { code: "Kannada", name: "Kannada (ಕನ್ನಡ)" },
+            { code: "Kashmiri", name: "Kashmiri (کٲشُر)" },
+            { code: "Konkani", name: "Konkani (कोंकणी)" },
+            { code: "Maithili", name: "Maithili (मैथिली)" },
+            { code: "Malayalam", name: "Malayalam (മലയാളം)" },
+            { code: "Manipuri", name: "Manipuri (মৈতৈলোন্)" },
+            { code: "Marathi", name: "Marathi (मराठी)" },
+            { code: "Nepali", name: "Nepali (नेपाली)" },
+            { code: "Odia", name: "Odia (ଓଡ଼ିଆ)" },
+            { code: "Punjabi", name: "Punjabi (ਪੰਜਾਬੀ)" },
+            { code: "Sanskrit", name: "Sanskrit (संस्कृतम्)" },
+            { code: "Santali", name: "Santali (ᱥᱟᱱᱛᱟᱲᱤ)" },
+            { code: "Sindhi", name: "Sindhi (सिन्धी)" },
+            { code: "Tamil", name: "Tamil (தமிழ்)" },
+            { code: "Telugu", name: "Telugu (తెలుగు)" },
+            { code: "Urdu", name: "Urdu (اردو)" }
+        ];
+
+        // --- Translation Dictionary ---
+        const i18n = {
+            "English": {
+                "main_title": "AI Movie Review Classifier",
+                "subtitle_search": "Search for a movie or analyze your own review text.",
+                "subtitle_custom": "Enter your own review text for an instant AI analysis.",
+                "results_language_label": "Results Language:",
+                "tab_search": "Search Movie",
+                "tab_custom": "Analyze Custom Text",
+                "button_analyze": "Analyze",
+                "placeholder_custom_review": "e.g., 'The movie was an absolute masterpiece! The acting was incredible and the plot was gripping...'",
+                "button_analyze_my_review": "Analyze My Review",
+                "button_back_to_search": "&larr; Back to Search",
+                "plot_summary": "Plot Summary",
+                "tab_user_sentiment": "User Sentiment",
+                "tab_critical_consensus": "Critical Consensus",
+                "loading_user_reviews": "AI is analyzing 1,000+ user reviews... This may take a moment.",
+                "error_no_user_reviews": "No user reviews were found on TMDB.",
+                "sentiment_breakdown": "Sentiment Breakdown",
+                "sentiment_breakdown_2": "Sentiment Breakdown",
+                "sentiment_breakdown_3": "Sentiment Breakdown",
+                "ai_summary": "AI-Generated Summary",
+                "ai_summary_2": "AI-Generated Summary",
+                "ai_summary_3": "AI-Generated Summary",
+                "key_aspects": "Key Aspects",
+                "key_aspects_2": "Key Aspects",
+                "key_aspects_3": "Key Aspects",
+                "prompt_deep_search": "Run an AI-powered Google search to find the critical consensus for this movie.",
+                "button_deep_search": "Run AI Deep Search",
+                "loading_deep_search": "AI is searching Google for reviews... This may take a moment.",
+                "error_deep_search": "AI Deep Search failed. Please try again.",
+                "loading_custom_review": "AI is analyzing your review...",
+                "user_review_count_info": "Based on {count} user reviews.",
+                "critical_review_count_info": "Based on Google Search results for {title}.",
+                "custom_review_count_info": "Based on your custom review.",
+                "error_no_movie_found": "Movie not found. Please check the spelling.",
+                "error_generic_search": "Search failed. Please try again later.",
+                "error_enter_movie": "Please enter a movie title.",
+                "error_enter_review": "Please enter a review with at least 20 characters.",
+                "error_ai_analysis": "AI analysis failed. Please try again.",
+                "error_ai_deep_search_failed": "AI Deep Search failed. Please try again.",
+                "error_invalid_ai_response": "Invalid response from AI.",
+                "error_api_key_missing": "Gemini API key is missing from index.html.",
+                "error_api_generic": "AI API Error: (Status: {status})",
+                "error_api_rate_limit": "AI API rate limit hit. Retrying in {delay}ms",
+                "pointer_good": "Good",
+                "pointer_bad": "Bad",
+                "pointer_neutral": "Neutral",
+                "plot_translation_error": "Could not translate plot summary."
+            },
+            "Hindi": {
+                "main_title": "एआई मूवी रिव्यू क्लासिफायर",
+                "subtitle_search": "किसी मूवी को खोजें या अपने खुद के रिव्यू टेक्स्ट का विश्लेषण करें।",
+                "subtitle_custom": "तत्काल एआई विश्लेषण के लिए अपना खुद का रिव्यू टेक्स्ट दर्ज करें।",
+                "results_language_label": "परिणाम भाषा:",
+                "tab_search": "मूवी खोजें",
+                "tab_custom": "कस्टम टेक्स्ट का विश्लेषण करें",
+                "button_analyze": "विश्लेषण करें",
+                "placeholder_custom_review": "जैसे, 'यह फिल्म एक उत्कृष्ट कृति थी! अभिनय अविश्वसनीय था और कथानक मनोरंजक था...'",
+                "button_analyze_my_review": "मेरे रिव्यू का विश्लेषण करें",
+                "button_back_to_search": "&larr; खोज पर वापस जाएं",
+                "plot_summary": "कथानक सारांश",
+                "tab_user_sentiment": "यूजर सेंटीमेंट",
+                "tab_critical_consensus": "क्रिटिकल कंसेन्सस",
+                "loading_user_reviews": "एआई 1,000+ यूजर रिव्यू का विश्लेषण कर रहा है... इसमें कुछ समय लग सकता है।",
+                "error_no_user_reviews": "TMDB पर कोई यूजर रिव्यू नहीं मिला।",
+                "sentiment_breakdown": "सेंटीमेंट ब्रेकडाउन",
+                "sentiment_breakdown_2": "सेंटीमेंट ब्रेकडाउन",
+                "sentiment_breakdown_3": "सेंटीमेंट ब्रेकडाउन",
+                "ai_summary": "एआई-जनित सारांश",
+                "ai_summary_2": "एआई-जनित सारांश",
+                "ai_summary_3": "एआई-जनित सारांश",
+                "key_aspects": "मुख्य पहलू",
+                "key_aspects_2": "मुख्य पहलू",
+                "key_aspects_3": "मुख्य पहलू",
+                "prompt_deep_search": "इस मूवी के लिए क्रिटिकल कंसेन्सस खोजने के लिए एआई-संचालित गूगल सर्च चलाएं।",
+                "button_deep_search": "एआई डीप सर्च चलाएं",
+                "loading_deep_search": "एआई गूगल पर रिव्यू खोज रहा है... इसमें कुछ समय लग सकता है।",
+                "error_deep_search": "एआई डीप सर्च विफल रहा। कृपया पुनः प्रयास करें।",
+                "loading_custom_review": "एआई आपके रिव्यू का विश्लेषण कर रहा है...",
+                "user_review_count_info": "{count} यूजर रिव्यू पर आधारित।",
+                "critical_review_count_info": "{title} के लिए गूगल सर्च परिणामों पर आधारित।",
+                "custom_review_count_info": "आपके कस्टम रिव्यू पर आधारित।",
+                "error_no_movie_found": "मूवी नहीं मिली। कृपया स्पेलिंग जांचें।",
+                "error_generic_search": "खोज विफल रही। कृपया बाद में पुनः प्रयास करें।",
+                "error_enter_movie": "कृपया एक मूवी का शीर्षक दर्ज करें।",
+                "error_enter_review": "कृपया कम से कम 20 अक्षरों वाला एक रिव्यू दर्ज करें।",
+                "error_ai_analysis": "एआई विश्लेषण विफल रहा। कृपया पुनः प्रयास करें।",
+                "error_ai_deep_search_failed": "एआई डीप सर्च विफल रहा। कृपया पुनः प्रयास करें।",
+                "error_invalid_ai_response": "एआई से अमान्य प्रतिक्रिया।",
+                "error_api_key_missing": "Gemini API कुंजी index.html से गायब है।",
+                "error_api_generic": "एआई एपीआई त्रुटि: (स्थिति: {status})",
+                "error_api_rate_limit": "एआई एपीआई दर सीमा समाप्त हो गई है। {delay}ms में पुनः प्रयास किया जा रहा है",
+                "pointer_good": "अच्छा",
+                "pointer_bad": "बुरा",
+                "pointer_neutral": "तटस्थ",
+                "plot_translation_error": "कथानक सारांश का अनुवाद नहीं किया जा सका।"
+            },
+            "Tamil": {
+                "main_title": "AI திரைப்பட விமர்சன வகைப்படுத்தி",
+                "subtitle_search": "ஒரு திரைப்படத்தைத் தேடுங்கள் அல்லது உங்கள் சொந்த விமர்சன உரையை பகுப்பாய்வு செய்யுங்கள்.",
+                "subtitle_custom": "உடனடி AI பகுப்பாய்விற்கு உங்கள் சொந்த விமர்சன உரையை உள்ளிடவும்.",
+                "results_language_label": "முடிவுகள் மொழி:",
+                "tab_search": "திரைப்படம் தேடு",
+                "tab_custom": "தனிப்பயன் உரையை பகுப்பாய்வு செய்",
+                "button_analyze": "பகுப்பாய்வு செய்",
+                "placeholder_custom_review": "எ.கா., 'படம் ஒரு tuyệt vời படைப்பு! நடிப்பு அற்புதம் மற்றும் கதை விறுவிறுப்பாக இருந்தது...'",
+                "button_analyze_my_review": "என் விமர்சனத்தைப் பகுப்பாய்வு செய்",
+                "button_back_to_search": "&larr; தேடலுக்குத் திரும்பு",
+                "plot_summary": "கதைச் சுருக்கம்",
+                "tab_user_sentiment": "பயனர் கருத்து",
+                "tab_critical_consensus": "விமர்சன ஒருமித்த கருத்து",
+                "loading_user_reviews": "AI 1,000+ பயனர் விமர்சனங்களை பகுப்பாய்வு செய்கிறது... இதற்கு சிறிது நேரம் ஆகலாம்.",
+                "error_no_user_reviews": "TMDB இல் பயனர் விமர்சனங்கள் எதுவும் இல்லை.",
+                "sentiment_breakdown": "உணர்வு முறிவு",
+                "sentiment_breakdown_2": "உணர்வு முறிவு",
+                "sentiment_breakdown_3": "உணர்வு முறிவு",
+                "ai_summary": "AI-உருவாக்கிய சுருக்கம்",
+                "ai_summary_2": "AI-உருவாக்கிய சுருக்கம்",
+                "ai_summary_3": "AI-உருவாக்கிய சுருக்கம்",
+                "key_aspects": "முக்கிய அம்சங்கள்",
+                "key_aspects_2": "முக்கிய அம்சங்கள்",
+                "key_aspects_3": "முக்கிய அம்சங்கள்",
+                "prompt_deep_search": "இந்தத் திரைப்படத்திற்கான விமர்சன ஒருமித்த கருத்தைக் கண்டறிய AI-இயங்கும் Google தேடலை இயக்கவும்.",
+                "button_deep_search": "AI டீப் தேடலை இயக்கவும்",
+                "loading_deep_search": "AI விமர்சனங்களுக்காக Google இல் தேடுகிறது... இதற்கு சிறிது நேரம் ஆகலாம்.",
+                "error_deep_search": "AI டீப் தேடல் தோல்வியடைந்தது. மீண்டும் முயலவும்.",
+                "loading_custom_review": "AI உங்கள் விமர்சனத்தைப் பகுப்பாய்வு செய்கிறது...",
+                "user_review_count_info": "{count} பயனர் விமர்சனங்களின் அடிப்படையில்.",
+                "critical_review_count_info": "{title} க்கான Google தேடல் முடிவுகளின் அடிப்படையில்.",
+                "custom_review_count_info": "உங்கள் தனிப்பயன் விமர்சனத்தின் அடிப்படையில்.",
+                "error_no_movie_found": "திரைப்படம் காணப்படவில்லை. தயவுசெய்து எழுத்துப்பிழையைச் சரிபார்க்கவும்.",
+                "error_generic_search": "தேடல் தோல்வியடைந்தது. பின்னர் மீண்டும் முயலவும்.",
+                "error_enter_movie": "திரைப்படத்தின் தலைப்பை உள்ளிடவும்.",
+                "error_enter_review": "குறைந்தது 20 எழுத்துகளுடன் ஒரு விமர்சனத்தை உள்ளிடவும்.",
+                "error_ai_analysis": "AI பகுப்பாய்வு தோல்வியடைந்தது. மீண்டும் முயலவும்.",
+                "error_ai_deep_search_failed": "AI டீப் தேடல் தோல்வியடைந்தது. மீண்டும் முயலவும்.",
+                "error_invalid_ai_response": "AI இலிருந்து தவறான பதில்.",
+                "error_api_key_missing": "Gemini API விசை index.html இல் இல்லை.",
+                "error_api_generic": "AI API பிழை: (நிலை: {status})",
+                "error_api_rate_limit": "AI API வீத வரம்பை எட்டியது. {delay}ms இல் மீண்டும் முயற்சிக்கிறது",
+                "pointer_good": "நல்லது",
+                "pointer_bad": "மோசமானது",
+                "pointer_neutral": "நடுநிலை",
+                "plot_translation_error": "கதைச் சுருக்கத்தை மொழிபெயர்க்க முடியவில்லை."
+            },
+            "Telugu": {
+                "main_title": "AI మూవీ రివ్యూ క్లాసిఫైయర్",
+                "subtitle_search": "ఒక సినిమా కోసం శోధించండి లేదా మీ స్వంత రివ్యూ టెక్స్ట్‌ను విశ్లేషించండి.",
+                "subtitle_custom": "తక్షణ AI విశ్లేషణ కోసం మీ స్వంత రివ్యూ టెక్స్ట్‌ను నమోదు చేయండి.",
+                "results_language_label": "ఫలితాల భాష:",
+                "tab_search": "సినిమా శోధన",
+                "tab_custom": "కస్టమ్ టెక్స్ట్‌ను విశ్లేషించండి",
+                "button_analyze": "విశ్లేషించండి",
+                "placeholder_custom_review": "ఉదా., 'సినిమా ఒక అద్భుతమైన కళాఖండం! నటన అద్భుతంగా ఉంది మరియు కథనం ఆకట్టుకుంది...'",
+                "button_analyze_my_review": "నా రివ్యూను విశ్లేషించండి",
+                "button_back_to_search": "&larr; శోధనకు తిరిగి వెళ్ళు",
+                "plot_summary": "కథా సారాంశం",
+                "tab_user_sentiment": "యూజర్ సెంటిమెంట్",
+                "tab_critical_consensus": "క్రిటికల్ కన్సెన్సస్",
+                "loading_user_reviews": "AI 1,000+ యూజర్ రివ్యూలను విశ్లేషిస్తోంది... దీనికి కొంత సమయం పట్టవచ్చు.",
+                "error_no_user_reviews": "TMDBలో యూజర్ రివ్యూలు కనుగొనబడలేదు.",
+                "sentiment_breakdown": "సెంటిమెంట్ బ్రేక్‌డౌన్",
+                "sentiment_breakdown_2": "సెంటిమెంట్ బ్రేక్‌డౌన్",
+                "sentiment_breakdown_3": "సెంటిమెంట్ బ్రేక్‌డౌన్",
+                "ai_summary": "AI-సృష్టించిన సారాంశం",
+                "ai_summary_2": "AI-సృష్టించిన సారాంశం",
+                "ai_summary_3": "AI-సృష్టించిన సారాంశం",
+                "key_aspects": "ముఖ్య అంశాలు",
+                "key_aspects_2": "ముఖ్య అంశాలు",
+                "key_aspects_3": "ముఖ్య అంశాలు",
+                "prompt_deep_search": "ఈ సినిమా కోసం క్రిటికల్ కన్సెన్సస్‌ను కనుగొనడానికి AI-ఆధారిత Google శోధనను అమలు చేయండి.",
+                "button_deep_search": "AI డీప్ సెర్చ్‌ను అమలు చేయండి",
+                "loading_deep_search": "AI రివ్యూల కోసం Googleలో శోధిస్తోంది... దీనికి కొంత సమయం పట్టవచ్చు.",
+                "error_deep_search": "AI డీప్ సెర్చ్ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+                "loading_custom_review": "AI మీ రివ్యూను విశ్లేషిస్తోంది...",
+                "user_review_count_info": "{count} యూజర్ రివ్యూల ఆధారంగా.",
+                "critical_review_count_info": "{title} కోసం Google శోధన ఫలితాల ఆధారంగా.",
+                "custom_review_count_info": "మీ కస్టమ్ రివ్యూ ఆధారంగా.",
+                "error_no_movie_found": "సినిమా కనుగొనబడలేదు. దయచేసి స్పెల్లింగ్ తనిఖీ చేయండి.",
+                "error_generic_search": "శోధన విఫలమైంది. దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి.",
+                "error_enter_movie": "దయచేసి సినిమా టైటిల్ నమోదు చేయండి.",
+                "error_enter_review": "దయచేసి కనీసం 20 అక్షరాలతో రివ్యూను నమోదు చేయండి.",
+                "error_ai_analysis": "AI విశ్లేషణ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+                "error_ai_deep_search_failed": "AI డీప్ సెర్చ్ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+                "error_invalid_ai_response": "AI నుండి చెల్లని ప్రతిస్పందన.",
+                "error_api_key_missing": "Gemini API కీ index.html నుండి లేదు.",
+                "error_api_generic": "AI API లోపం: (స్థితి: {status})",
+                "error_api_rate_limit": "AI API రేట్ పరిమితికి చేరుకుంది. {delay}msలో మళ్లీ ప్రయత్నిస్తోంది",
+                 "pointer_good": "మంచిది",
+                 "pointer_bad": "చెడ్డది",
+                 "pointer_neutral": "తటస్థం",
+                 "plot_translation_error": "కథా సారాంశం అనువదించబడలేదు."
+            },
+            "Bengali": {
+                "main_title": "এআই মুভি রিভিউ ক্লাসিফায়ার",
+                "subtitle_search": "একটি মুভি অনুসন্ধান করুন বা আপনার নিজের রিভিউ টেক্সট বিশ্লেষণ করুন।",
+                "subtitle_custom": "তাৎক্ষণিক এআই বিশ্লেষণের জন্য আপনার নিজের রিভিউ টেক্সট লিখুন।",
+                "results_language_label": "ফলাফলের ভাষা:",
+                "tab_search": "মুভি অনুসন্ধান",
+                "tab_custom": "কাস্টম টেক্সট বিশ্লেষণ",
+                "button_analyze": "বিশ্লেষণ করুন",
+                "placeholder_custom_review": "যেমন, 'সিনেমাটি একটি নিখুঁত মাস্টারপিস ছিল! অভিনয় ছিল অবিশ্বাস্য এবং প্লট ছিল আকর্ষণীয়...'",
+                "button_analyze_my_review": "আমার রিভিউ বিশ্লেষণ করুন",
+                "button_back_to_search": "&larr; অনুসন্ধানে ফিরে যান",
+                "plot_summary": "প্লট সারাংশ",
+                "tab_user_sentiment": "ইউজার সেন্টিমেন্ট",
+                "tab_critical_consensus": "ক্রিটিক্যাল কনসেনসাস",
+                "loading_user_reviews": "এআই ১,০০০+ ইউজার রিভিউ বিশ্লেষণ করছে... এতে কিছু সময় লাগতে পারে।",
+                "error_no_user_reviews": "TMDB-তে কোনো ইউজার রিভিউ পাওয়া যায়নি।",
+                "sentiment_breakdown": "সেন্টিমেন্ট ব্রেকডাউন",
+                "sentiment_breakdown_2": "সেন্টিমেন্ট ব্রেকডাউন",
+                "sentiment_breakdown_3": "সেন্টিমেন্ট ব্রেকডাউন",
+                "ai_summary": "এআই-জেনারেটেড সারাংশ",
+                "ai_summary_2": "এআই-জেনারেটেড সারাংশ",
+                "ai_summary_3": "এআই-জেনারেটেড সারাংশ",
+                "key_aspects": "মূল দিক",
+                "key_aspects_2": "মূল দিক",
+                "key_aspects_3": "মূল দিক",
+                "prompt_deep_search": "এই মুভির জন্য ক্রিটিক্যাল কনসেনসাস খুঁজে পেতে একটি এআই-চালিত গুগল অনুসন্ধান চালান।",
+                "button_deep_search": "এআই ডিপ সার্চ চালান",
+                "loading_deep_search": "এআই রিভিউর জন্য গুগল অনুসন্ধান করছে... এতে কিছু সময় লাগতে পারে।",
+                "error_deep_search": "এআই ডিপ সার্চ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+                "loading_custom_review": "এআই আপনার রিভিউ বিশ্লেষণ করছে...",
+                "user_review_count_info": "{count} ইউজার রিভিউর উপর ভিত্তি করে।",
+                "critical_review_count_info": "{title} এর জন্য গুগল অনুসন্ধান ফলাফলের উপর ভিত্তি করে।",
+                "custom_review_count_info": "আপনার কাস্টম রিভিউর উপর ভিত্তি করে।",
+                "error_no_movie_found": "মুভি পাওয়া যায়নি। অনুগ্রহ করে বানান পরীক্ষা করুন।",
+                "error_generic_search": "অনুসন্ধান ব্যর্থ হয়েছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।",
+                "error_enter_movie": "অনুগ্রহ করে একটি মুভির নাম লিখুন।",
+                "error_enter_review": "অনুগ্রহ করে কমপক্ষে ২০ অক্ষরের একটি রিভিউ লিখুন।",
+                "error_ai_analysis": "এআই বিশ্লেষণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+                "error_ai_deep_search_failed": "এআই ডিপ সার্চ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+                "error_invalid_ai_response": "এআই থেকে অবৈধ প্রতিক্রিয়া।",
+                "error_api_key_missing": "Gemini API কী index.html থেকে অনুপস্থিত।",
+                "error_api_generic": "এআই এপিআই ত্রুটি: (অবস্থা: {status})",
+                "error_api_rate_limit": "এআই এপিআই রেট লিমিটে পৌঁছেছে। {delay}ms এ আবার চেষ্টা করা হচ্ছে",
+                "pointer_good": "ভালো",
+                "pointer_bad": "খারাপ",
+                "pointer_neutral": "নিরপেক্ষ",
+                "plot_translation_error": "প্লট সারাংশ অনুবাদ করা যায়নি।"
+            },
+            "Kannada": {
+                "main_title": "AI ಚಲನಚಿತ್ರ ವಿಮರ್ಶೆ ವರ್ಗೀಕಾರಕ",
+                "subtitle_search": "ఒక సినిమా కోసం శోధించండి లేదా మీ స్వంత రివ్యూ టెక్స్ట్‌ను విశ్లేషించండి.",
+                "subtitle_custom": "ఒక సినిమా కోసం శోధించండి లేదా మీ స్వంత రివ్యూ టెక్స్ట్‌ను విశ్లేషించండి.",
+                "results_language_label": "ಫಲಿತಾಂಶಗಳ ಭಾಷೆ:",
+                "tab_search": "ಚಲನಚಿತ್ರ ಹುಡುಕಿ",
+                "tab_custom": "ಕಸ್ಟಮ್ ಪಠ್ಯವನ್ನು ವಿಶ್ಲೇಷಿಸಿ",
+                "button_analyze": "ವಿಶ್ಲೇಷಿಸಿ",
+                "placeholder_custom_review": "ಉದಾ., 'ಚಿತ್ರವು ಒಂದು ಸಂಪೂರ್ಣ ಮೇರುಕೃತಿಯಾಗಿತ್ತು! ನಟನೆ ಅದ್ಭುತವಾಗಿತ್ತು ಮತ್ತು ಕಥಾವಸ್ತು ಹಿಡಿದಿಟ್ಟುಕೊಳ್ಳುವಂತಿತ್ತು...'",
+                "button_analyze_my_review": "ನನ್ನ ವಿಮರ್ಶೆಯನ್ನು ವಿಶ್ಲೇಷಿಸಿ",
+                "button_back_to_search": "&larr; ಹುಡುಕಾಟಕ್ಕೆ ಹಿಂತಿರುಗಿ",
+                "plot_summary": "ಕಥಾ ಸಾರಾಂಶ",
+                "tab_user_sentiment": "ಬಳಕೆದಾರರ ಭಾವನೆ",
+                "tab_critical_consensus": "ವಿಮರ್ಶಾತ್ಮಕ ಒಮ್ಮತ",
+                "loading_user_reviews": "AI 1,000+ ಬಳಕೆದಾರರ ವಿಮರ್ಶೆಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತಿದೆ... ಇದಕ್ಕೆ ಸ್ವಲ್ಪ ಸಮಯ ತೆಗೆದುಕೊಳ್ಳಬಹುದು.",
+                "error_no_user_reviews": "TMDB ನಲ್ಲಿ ಯಾವುದೇ ಬಳಕೆದಾರ ವಿಮರ್ಶೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+                "sentiment_breakdown": "ಭಾವನೆಯ ವಿಭಜನೆ",
+                "sentiment_breakdown_2": "ಭಾವನೆಯ ವಿಭಜನೆ",
+                "sentiment_breakdown_3": "ಭಾವನೆಯ ವಿಭಜನೆ",
+                "ai_summary": "AI-ರಚಿಸಿದ ಸಾರಾಂಶ",
+                "ai_summary_2": "AI-ರಚಿಸಿದ ಸಾರಾಂಶ",
+                "ai_summary_3": "AI-ರಚಿಸಿದ ಸಾರಾಂಶ",
+                "key_aspects": "ಪ್ರಮುಖ ಅಂಶಗಳು",
+                "key_aspects_2": "ಪ್ರಮುಖ ಅಂಶಗಳು",
+                "key_aspects_3": "ಪ್ರಮುಖ ಅಂಶಗಳು",
+                "prompt_deep_search": "ಈ ಚಲನಚಿತ್ರದ ವಿಮರ್ಶಾತ್ಮಕ ಒಮ್ಮತವನ್ನು ಕಂಡುಹಿಡಿಯಲು AI-ಚಾಲಿತ Google ಹುಡುಕಾಟವನ್ನು ರನ್ ಮಾಡಿ.",
+                "button_deep_search": "AI ಡೀಪ್ ಸರ್ಚ್ ರನ್ ಮಾಡಿ",
+                "loading_deep_search": "AI ವಿಮರ್ಶೆಗಳಿಗಾಗಿ Google ನಲ್ಲಿ ಹುಡುಕುತ್ತಿದೆ... ಇದಕ್ಕೆ ಸ್ವಲ್ಪ ಸಮಯ ತೆಗೆದುಕೊಳ್ಳಬಹುದು.",
+                "error_deep_search": "AI ಡೀಪ್ ಸರ್ಚ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+                "loading_custom_review": "AI ನಿಮ್ಮ ವಿಮರ್ಶೆಯನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತಿದೆ...",
+                "user_review_count_info": "{count} ಬಳಕೆದಾರರ ವಿಮರ್ಶೆಗಳ ಆಧಾರದ ಮೇಲೆ.",
+                "critical_review_count_info": "{title} ಗಾಗಿ Google ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳ ಆಧಾರದ ಮೇಲೆ.",
+                "custom_review_count_info": "ನಿಮ್ಮ ಕಸ್ಟಮ್ ವಿಮರ್ಶೆಯ ಆಧಾರದ ಮೇಲೆ.",
+                "error_no_movie_found": "ಚಲನಚಿತ್ರ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಕಾಗುಣಿತವನ್ನು ಪರಿಶೀಲಿಸಿ.",
+                "error_generic_search": "ಹುಡುಕಾಟ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+                "error_enter_movie": "దయచేసి సినిమా టైటిల్ నమోదు చేయండి.",
+                "error_enter_review": "దయచేసి కనీసం 20 అక్షరాలతో రివ్యూను నమోదు చేయండి.",
+                "error_ai_analysis": "AI ವಿಶ್ಲೇಷಣೆ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+                "error_ai_deep_search_failed": "AI ಡೀಪ್ ಸರ್ಚ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+                "error_invalid_ai_response": "AI ನಿಂದ ಅಮಾನ್ಯ ಪ್ರತಿಕ್ರಿಯೆ.",
+                "error_api_key_missing": "Gemini API ಕೀ index.html ನಿಂದ ಕಾಣೆಯಾಗಿದೆ.",
+                "error_api_generic": "AI API ದೋಷ: (ಸ್ಥಿತಿ: {status})",
+                "error_api_rate_limit": "AI API ದರ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ. {delay}ms ನಲ್ಲಿ ಮರುಪ್ರಯತ್ನಿಸಲಾಗುತ್ತಿದೆ",
+                "pointer_good": "ಒಳ್ಳೆಯದು",
+                "pointer_bad": "ಕೆಟ್ಟದು",
+                "pointer_neutral": "ತಟಸ್ಥ",
+                "plot_translation_error": "ಕಥಾ ಸಾರಾಂಶವನ್ನು ಅನುವಾದಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ."
+            }
+            // Other languages will default to English and won't have plot translation
+        };
+
+        // --- UI Functions ---
+        
+        /**
+         * Instantly translates all static UI elements
+         */
+        function translateUI() {
+            const lang = getSelectedLanguage();
+            // Get the translations for the selected language, or default to English
+            const translations = i18n[lang] || i18n["English"];
+
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.getAttribute('data-lang-key');
+                if (translations[key]) {
+                    el.innerHTML = translations[key]; // Use innerHTML to render arrows like &larr;
+                } else if (i18n["English"][key]) {
+                    // Fallback to English if translation missing
+                    el.innerHTML = i18n["English"][key];
+                }
+            });
+
+            // Special case for placeholders
+            const customReviewPlaceholder = document.getElementById('review-text');
+            if (customReviewPlaceholder) {
+                customReviewPlaceholder.placeholder = translations['placeholder_custom_review'] || i18n['English']['placeholder_custom_review'];
+            }
+        }
+
+        function switchTab(tabName) {
+            const translations = i18n[getSelectedLanguage()] || i18n["English"];
+            if (tabName === 'search') {
+                document.getElementById('search-container').classList.remove('hidden');
+                document.getElementById('custom-container').classList.add('hidden');
+                document.getElementById('tab-search').classList.add('active');
+                document.getElementById('tab-custom').classList.remove('active');
+                document.getElementById('header-subtitle').textContent = translations['subtitle_search'] || i18n['English']['subtitle_search'];
+            } else {
+                document.getElementById('search-container').classList.add('hidden');
+                document.getElementById('custom-container').classList.remove('hidden');
+                document.getElementById('tab-search').classList.remove('active');
+                document.getElementById('tab-custom').classList.add('active');
+                document.getElementById('header-subtitle').textContent = translations['subtitle_custom'] || i18n['English']['subtitle_custom'];
+            }
+            clearAutocomplete();
+        }
+
+        // Switch between results tabs
+        function switchResultsTab(tabName) {
+            if (tabName === 'user') {
+                document.getElementById('user-sentiment-panel').classList.remove('hidden');
+                document.getElementById('critical-sentiment-panel').classList.add('hidden');
+                document.getElementById('results-tab-user').classList.add('active');
+                document.getElementById('results-tab-critical').classList.remove('active');
+            } else {
+                document.getElementById('user-sentiment-panel').classList.add('hidden');
+                document.getElementById('critical-sentiment-panel').classList.remove('hidden');
+                document.getElementById('results-tab-user').classList.remove('active');
+                document.getElementById('results-tab-critical').classList.add('active');
+            }
+        }
+        
+        function showInputScreen() {
+            document.getElementById('results-screen').classList.add('hidden');
+            document.getElementById('input-screen').classList.remove('hidden');
+            document.getElementById('movie-search-input').value = '';
+            document.getElementById('review-text').value = '';
+            document.getElementById('ratings-container').innerHTML = '';
+            currentMovieTitle = null;
+            currentMovieData = null;
+            currentCustomReview = null;
+            plotTranslationCache = {}; // Clear plot cache
+            showMessage("", false, 1);
+        }
+
+        function showResultsScreen() {
+            document.getElementById('input-screen').classList.add('hidden');
+            document.getElementById('results-screen').classList.remove('hidden');
+        }
+
+        function showLoading(buttonId, isLoading) {
+            const textEl = document.getElementById(`${buttonId}-text`);
+            const spinnerEl = document.getElementById(`${buttonId}-spinner`);
+            const buttonEl = document.getElementById(buttonId);
+            
+            if(textEl) textEl.classList.toggle('hidden', isLoading);
+            if(spinnerEl) spinnerEl.classList.toggle('hidden', !isLoading);
+            if(buttonEl) buttonEl.disabled = isLoading;
+        }
+        
+        function showPlotLoading(isLoading) {
+             const spinnerEl = document.getElementById('plot-loading-spinner');
+             if(spinnerEl) spinnerEl.classList.toggle('hidden', !isLoading);
+        }
+
+        function showMessage(key, isError = true, duration = 4000, vars = {}) {
+            const translations = i18n[getSelectedLanguage()] || i18n["English"];
+            let message = translations[key] || i18n["English"][key] || key;
+            
+            // Replace variables like {count} or {title}
+            for (const k in vars) {
+                message = message.replace(`{${k}}`, vars[k]);
+            }
+            
+            const messageBox = document.getElementById('message-box');
+            clearTimeout(messageTimer); 
+
+            if (!message) {
+                messageBox.classList.add('hidden');
+                return;
+            }
+
+            messageBox.textContent = message;
+            messageBox.classList.toggle('bg-red-500', isError);
+            messageBox.classList.toggle('bg-green-500', !isError);
+            messageBox.classList.remove('hidden', 'fade-out');
+            
+            messageTimer = setTimeout(() => {
+                messageBox.classList.add('fade-out');
+                setTimeout(() => messageBox.classList.add('hidden'), 500);
+            }, duration);
+        }
+
+        // --- Autocomplete Functions ---
+        
+        function handleAutocomplete() {
+            clearTimeout(autocompleteTimer);
+            autocompleteTimer = setTimeout(async () => {
+                const query = document.getElementById('movie-search-input').value;
+                if (query.length < 3) {
+                    clearAutocomplete();
+                    return;
+                }
+                try {
+                    const response = await fetch(`${BACKEND_URL}/autocomplete?query=${encodeURIComponent(query)}`);
+                    if (!response.ok) return;
+                    const suggestions = await response.json();
+                    renderAutocomplete(suggestions);
+                } catch (error) {
+                    console.error("Autocomplete fetch failed:", error);
+                }
+            }, 300);
+        }
+
+        function renderAutocomplete(suggestions) {
+            const listEl = document.getElementById('autocomplete-list');
+            listEl.innerHTML = '';
+            if (suggestions.length === 0) return;
+
+            suggestions.slice(0, 5).forEach((movie) => { // Limit to 5 suggestions
+                const itemEl = document.createElement('div');
+                itemEl.className = "autocomplete-item";
+                itemEl.textContent = `${movie.title} (${movie.year})`;
+                itemEl.onclick = () => selectAutocomplete(movie.fullText);
+                listEl.appendChild(itemEl);
+            });
+        }
+
+        function selectAutocomplete(fullText) {
+            document.getElementById('movie-search-input').value = fullText;
+            clearAutocomplete();
+            handleSearch(); 
+        }
+
+        function clearAutocomplete() {
+            document.getElementById('autocomplete-list').innerHTML = '';
+        }
+
+        // --- Language Selection ---
+        function getSelectedLanguage() {
+            return currentLanguage; // Read from global state
+        }
+        
+        function setSelectedLanguage(langCode, langName) {
+            currentLanguage = langCode;
+            document.getElementById('language-dropdown-button').textContent = langName;
+            // Add dropdown arrow back
+            document.getElementById('language-dropdown-button').innerHTML += `
+                <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>`;
+            closeLanguageDropdown();
+            updateLanguageOptionsUI(); // Update highlight
+            // Trigger UI translation and potential re-analysis
+            reAnalyzeForLanguageChange();
+        }
+
+        function toggleLanguageDropdown() {
+            isDropdownOpen = !isDropdownOpen;
+            document.getElementById('language-dropdown-panel').classList.toggle('hidden', !isDropdownOpen);
+            document.getElementById('language-dropdown-button').setAttribute('aria-expanded', isDropdownOpen);
+        }
+
+        function closeLanguageDropdown() {
+             isDropdownOpen = false;
+             document.getElementById('language-dropdown-panel').classList.add('hidden');
+             document.getElementById('language-dropdown-button').setAttribute('aria-expanded', isDropdownOpen);
+        }
+        
+        function updateLanguageOptionsUI() {
+             const options = document.querySelectorAll('.language-option');
+             options.forEach(opt => {
+                 opt.classList.toggle('selected', opt.dataset.langCode === currentLanguage);
+             });
+        }
+
+        function populateLanguageDropdown() {
+            const panel = document.getElementById('language-dropdown-panel').querySelector('.grid');
+            panel.innerHTML = ''; // Clear existing
+            languages.forEach(lang => {
+                const option = document.createElement('a');
+                option.href = '#';
+                option.className = 'language-option';
+                option.textContent = lang.name;
+                option.dataset.langCode = lang.code;
+                option.dataset.langName = lang.name;
+                option.onclick = (e) => {
+                    e.preventDefault();
+                    setSelectedLanguage(lang.code, lang.name);
+                };
+                panel.appendChild(option);
+            });
+            updateLanguageOptionsUI(); // Initial highlight
+        }
+        
+        // --- Main Search Handler ---
+        async function handleSearch() {
+            const query = document.getElementById('movie-search-input').value;
+            if (query.trim().length === 0) {
+                showMessage("error_enter_movie");
+                return;
+            }
+            showLoading('search-button', true);
+            showMessage("", false, 1);
+            clearAutocomplete();
+            currentMovieTitle = null;
+            currentMovieData = null;
+            plotTranslationCache = {}; // Clear plot cache on new search
+
+            // Reset AI results panels
+            document.getElementById('user-results-content').classList.add('hidden');
+            document.getElementById('critical-results-content').classList.add('hidden');
+            document.getElementById('custom-text-panel').classList.add('hidden');
+            document.getElementById('user-error-state').classList.add('hidden');
+            document.getElementById('critical-error-state').classList.add('hidden');
+            document.getElementById('critical-initial-state').classList.add('hidden');
+            
+            // Show the main AI analysis section
+            document.getElementById('ai-analysis-section').classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/get-movie-data?title=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error: ${response.statusText}`);
+                }
+                const data = await response.json();
+                
+                currentMovieTitle = `${data.title} (${data.year})`;
+                currentMovieData = data; // Store data for re-analysis & plot translation
+                
+                renderMovieInfo(data); // Will initially render plot in English
+                document.getElementById('movie-info-section').classList.remove('hidden');
+                showResultsScreen();
+                
+                 // Translate plot immediately if needed
+                await maybeTranslatePlot(); 
+                
+                if (data.reviews && data.reviews.length > 0) {
+                    // --- REVIEWS FOUND ---
+                    // 1. Show User Sentiment Tab
+                    document.getElementById('results-tab-user').classList.remove('hidden');
+                    document.getElementById('user-loading-state').classList.remove('hidden');
+                    showMessage('user_review_count_info', false, 3000, {count: data.reviews.length});
+                    document.getElementById('user-review-count-info').textContent = (i18n[getSelectedLanguage()] || i18n["English"])['user_review_count_info'].replace('{count}', data.reviews.length);
+                    
+                    // 2. Show Critical Consensus Tab (with button)
+                    document.getElementById('results-tab-critical').classList.remove('hidden');
+                    document.getElementById('critical-initial-state').classList.remove('hidden'); // Show button
+                    document.getElementById('critical-loading-state').classList.add('hidden');
+                    document.getElementById('critical-error-state').classList.add('hidden');
+
+                    // 3. Set User Sentiment as active
+                    switchResultsTab('user');
+
+                    // 4. Run AI analysis for users (don't await, let it run in background)
+                    runAiAnalysis(data.reviews, 'user');
+
+                } else {
+                    // --- NO REVIEWS FOUND ---
+                    // 1. Hide User Sentiment Tab
+                    document.getElementById('results-tab-user').classList.add('hidden');
+                    
+                    // 2. Show Critical Consensus Tab
+                    document.getElementById('results-tab-critical').classList.remove('hidden');
+                    document.getElementById('critical-loading-state').classList.remove('hidden');
+                    document.getElementById('critical-initial-state').classList.add('hidden');
+                    document.getElementById('critical-error-state').classList.add('hidden');
+                    document.getElementById('critical-review-count-info').textContent = (i18n[getSelectedLanguage()] || i18n["English"])['critical_review_count_info'].replace('{title}', currentMovieTitle);
+                    
+                    // 3. Set Critical Consensus as active
+                    switchResultsTab('critical');
+
+                    // 4. Automatically run Deep Search (don't await)
+                    triggerAiDeepSearch(true); // true = auto-run
+                }
+
+            } catch (error) {
+                console.error("Search failed:", error);
+                if (error.message.includes("not found")) {
+                    showMessage("error_no_movie_found");
+                } else {
+                    showMessage("error_generic_search");
+                }
+            } finally {
+                showLoading('search-button', false);
+            }
+        }
+
+        // --- Custom Text Analysis Handler ---
+        async function handleCustomAnalysis() {
+            const reviewText = document.getElementById('review-text').value;
+            if (reviewText.trim().length < 20) {
+                showMessage("error_enter_review");
+                return;
+            }
+            showLoading('custom-analyze-button', true);
+            showMessage("", false, 1);
+            currentMovieTitle = null;
+            currentMovieData = null;
+            currentCustomReview = reviewText; // Store for re-analysis
+            plotTranslationCache = {}; // Clear plot cache
+
+            // Hide movie-specific UI
+            document.getElementById('movie-info-section').classList.add('hidden');
+            document.getElementById('ai-analysis-section').classList.remove('hidden');
+            // Hide results tabs
+            document.getElementById('results-tab-user').parentElement.parentElement.classList.add('hidden');
+            document.getElementById('user-sentiment-panel').classList.add('hidden');
+            document.getElementById('critical-sentiment-panel').classList.add('hidden');
+            
+            // Show custom text panel
+            const customPanel = document.getElementById('custom-text-panel');
+            customPanel.classList.remove('hidden');
+            document.getElementById('custom-loading-state').classList.remove('hidden');
+            document.getElementById('custom-results-content').classList.add('hidden');
+
+            try {
+                showResultsScreen();
+                await runAiAnalysis([reviewText], 'custom');
+                
+                document.getElementById('custom-loading-state').classList.add('hidden');
+                document.getElementById('custom-results-content').classList.remove('hidden');
+                document.getElementById('custom-review-count-info').textContent = (i18n[getSelectedLanguage()] || i18n["English"])['custom_review_count_info'];
+
+
+            } catch (error) {
+                // Error is handled inside runAiAnalysis, which calls showMessage
+                document.getElementById('custom-loading-state').classList.add('hidden');
+                showMessage("error_ai_analysis");
+            } finally {
+                showLoading('custom-analyze-button', false);
+            }
+        }
+
+        /**
+         * Renders the non-AI movie info (poster, plot, ratings)
+         * Always renders plot in English initially.
+         */
+        function renderMovieInfo(data) {
+            // Show movie tabs
+            document.getElementById('results-tab-user').parentElement.parentElement.classList.remove('hidden');
+            
+            document.getElementById('movie-title').textContent = `${data.title} (${data.year})`;
+            // Store English plot in cache and display it
+            plotTranslationCache = {}; // Clear cache on new movie render
+            plotTranslationCache['English'] = data.plot || "No plot summary available.";
+            document.getElementById('movie-plot').textContent = plotTranslationCache['English'];
+            document.getElementById('movie-poster').src = data.poster;
+            document.getElementById('movie-poster').onerror = () => {
+                document.getElementById('movie-poster').src = 'https://placehold.co/500x750/374151/4b5563?text=Poster+Not+Found';
+            };
+
+            const ratingsContainer = document.getElementById('ratings-container');
+            ratingsContainer.innerHTML = '';
+            
+            if (data.ratings && data.ratings.length > 0) {
+                data.ratings.forEach(rating => {
+                    let logo = '';
+                    let color = 'bg-yellow-500'; 
+                    if (rating.Source.includes('IMDb')) {
+                        logo = 'IMDb';
+                        color = 'bg-yellow-600';
+                    } else if (rating.Source.includes('Rotten Tomatoes')) {
+                        logo = '🍅';
+                        color = 'bg-red-600';
+                    } else if (rating.Source.includes('Metacritic')) {
+                        logo = 'M';
+                    }
+                    
+                    if (logo) {
+                        const ratingEl = document.createElement('div');
+                        ratingEl.className = `flex items-center gap-2 ${color} text-white font-bold py-2 px-3 rounded-lg`;
+                        ratingEl.innerHTML = `
+                            <span class="font-mono text-lg">${logo}</span>
+                            <span>${rating.Value}</span>
+                        `;
+                        ratingsContainer.appendChild(ratingEl);
+                    }
+                });
+            } 
+            if (ratingsContainer.innerHTML === '') {
+                ratingsContainer.innerHTML = `<span class="text-gray-500">No ratings found.</span>`;
+            }
+        }
+        
+        /**
+         * Trigger for the "Run AI Deep Search" button (manual click OR auto-run)
+         */
+        async function triggerAiDeepSearch(isAutoRun = false) {
+            const buttonId = 'deep-search-button';
+            if (!isAutoRun) {
+                showLoading(buttonId, true);
+            }
+            
+            document.getElementById('critical-initial-state').classList.add('hidden');
+            document.getElementById('critical-loading-state').classList.remove('hidden');
+            document.getElementById('critical-error-state').classList.add('hidden');
+            document.getElementById('critical-results-content').classList.add('hidden'); // Hide old results
+            
+            const translations = i18n[getSelectedLanguage()] || i18n["English"];
+            document.getElementById('critical-review-count-info').textContent = translations['critical_review_count_info'].replace('{title}', currentMovieTitle);
+            
+            try {
+                await runAiDeepSearch(currentMovieTitle);
+                // Results are rendered inside runAiDeepSearch
+            } catch (error) {
+                // Show error in the critical panel
+                document.getElementById('critical-error-state').classList.remove('hidden');
+                showMessage('error_ai_deep_search_failed', true);
+            } finally {
+                if (!isAutoRun) {
+                    showLoading(buttonId, false);
+                }
+                document.getElementById('critical-loading-state').classList.add('hidden');
+            }
+        }
+        
+        /**
+         * Standard AI analysis for TMDB reviews or custom text
+         */
+        async function runAiAnalysis(reviews, typePrefix) { // typePrefix is 'user' or 'custom'
+            document.getElementById(`${typePrefix}-loading-state`).classList.remove('hidden');
+            document.getElementById(`${typePrefix}-results-content`).classList.add('hidden'); // Hide old results
+            
+            const reviewText = reviews.join(" \n\n ");
+            // Use substring for TMDB user reviews, but not for single custom reviews
+            const promptText = typePrefix === 'user' ? reviewText.substring(0, 30000) : reviewText;
+            const targetLanguage = getSelectedLanguage();
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    overall_sentiment: { type: "STRING", enum: ["Good", "Bad", "Neutral"] },
+                    sentiment_scores: {
+                        type: "OBJECT",
+                        properties: {
+                            good: { type: "NUMBER" },
+                            bad: { type: "NUMBER" },
+                            neutral: { type: "NUMBER" }
+                        },
+                        required: ["good", "bad", "neutral"]
+                    },
+                    summary: { type: "STRING" },
+                    pointers: {
+                        type: "OBJECT",
+                        properties: {
+                            good: { type: "ARRAY", items: { type: "STRING" } },
+                            bad: { type: "ARRAY", items: { type: "STRING" } },
+                            neutral: { type: "ARRAY", items: { "type": "STRING" } }
+                        },
+                        required: ["good", "bad", "neutral"]
+                    }
+                },
+                required: ["overall_sentiment", "sentiment_scores", "summary", "pointers"]
+            };
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: `You are a movie review analyst. Analyze the following batch of user reviews. Provide a JSON response matching the schema.
+- The summary should be 1-2 sentences summarizing all reviews.
+- The sentiment scores (good, bad, neutral) must add up to 100.
+- For pointers, extract key aspects (like 'Story', 'Acting', 'Cinematography') and group them by sentiment. If no aspects are found for a sentiment, return an empty array.
+- **IMPORTANT**: Translate the 'summary' and all string values inside the 'pointers' object into ${targetLanguage}. The overall_sentiment and keys should remain in English.
+
+Batch of Reviews: "${promptText}" ` 
+                    }]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+            
+            try {
+                const result = await callGeminiAPI(payload);
+                if (result && result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                    renderAiResults(typePrefix, data);
+                    document.getElementById(`${typePrefix}-loading-state`).classList.add('hidden');
+                    document.getElementById(`${typePrefix}-results-content`).classList.remove('hidden');
+                } else {
+                    throw new Error(i18n['English']['error_invalid_ai_response']);
+                }
+            } catch (error) {
+                console.error("AI Analysis failed:", error);
+                if (typePrefix === 'user') {
+                    document.getElementById('user-error-state').classList.remove('hidden');
+                    document.getElementById('user-error-state').querySelector('p').textContent = (i18n[getSelectedLanguage()] || i18n['English'])['error_ai_analysis'];
+                } else if (typePrefix === 'custom') {
+                    document.getElementById('custom-loading-state').classList.add('hidden');
+                    showMessage("error_ai_analysis");
+                }
+                throw error; // Re-throw to be caught by parent
+            }
+        }
+
+        /**
+         * AI Deep Search with Google Grounding
+         * This is the NEW, more robust version.
+         */
+        async function runAiDeepSearch(movieTitle) {
+            const targetLanguage = getSelectedLanguage();
+            const prompt = `You are a movie review analyst. A user wants to know the sentiment for the movie "${movieTitle}".
+1.  First, perform a Google search for reviews of "${movieTitle}". **You MUST search for reviews in English AND in major Indian languages like Hindi, Tamil, Telugu, and Bengali.**
+2.  Read the search results from critics, news outlets, and user review sites (like IMDb, Rotten Tomatoes, BookMyShow, etc.).
+3.  Based *only on your search results*, perform a sentiment analysis.
+4.  Provide a single, valid JSON object as your response, with no other text, markdown, or "json" tags.
+5.  **Translate the 'summary' and all string values inside the 'pointers' object into ${targetLanguage}.** The keys ("summary", "good", "bad", "neutral", "sentiment_scores", etc.) must remain in English.
+6.  The JSON object must match this exact schema:
+{
+  "summary": "A 1-2 sentence summary of the critical and user consensus, in the target language.",
+  "pointers": {
+    "good": ["Aspect 1 in target language", "Aspect 2 in target language"],
+    "bad": ["Aspect 3 in target language"],
+    "neutral": ["Aspect 4 in target language"]
+  },
+  "sentiment_scores": {
+    "good": <a number 0-100>,
+    "bad": <a number 0-100>,
+    "neutral": <a number 0-100>
+  },
+  "overall_sentiment": "Good"
+}
+7. The sentiment_scores (good, bad, neutral) MUST add up to 100.
+8. If no aspects are found for a sentiment, return an empty array.
+`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                tools: [{
+                    "google_search": {}
+                }],
+            };
+            
+            try {
+                const result = await callGeminiAPI(payload);
+                if (result && result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    let textResponse = result.candidates[0].content.parts[0].text;
+                    
+                    // Clean the response: remove markdown "```json" tags if they exist
+                    textResponse = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
+                    
+                    const data = JSON.parse(textResponse);
+                    
+                    // Auto-fix scores if they don't add up to 100
+                    const total = (data.sentiment_scores.good || 0) + (data.sentiment_scores.bad || 0) + (data.sentiment_scores.neutral || 0);
+                    if (total > 0) { // Check total > 0 to avoid divide by zero
+                        const good = data.sentiment_scores.good || 0;
+                        const bad = data.sentiment_scores.bad || 0;
+                        const neutral = data.sentiment_scores.neutral || 0;
+                        
+                        data.sentiment_scores.good = Math.round((good / total) * 100);
+                        data.sentiment_scores.bad = Math.round((bad / total) * 100);
+                        data.sentiment_scores.neutral = 100 - data.sentiment_scores.good - data.sentiment_scores.bad;
+                    } else if (total === 0) {
+                         data.sentiment_scores.neutral = 100; // Default to neutral if AI gives all zeros
+                         data.sentiment_scores.good = 0;
+                         data.sentiment_scores.bad = 0;
+                    }
+                    
+                    renderAiResults('critical', data); // Render into 'critical' panel
+                    document.getElementById('critical-results-content').classList.remove('hidden');
+                } else {
+                    throw new Error(i18n['English']['error_invalid_ai_response']);
+                }
+            } catch (error) {
+                console.error("AI Deep Search failed:", error);
+                throw error; // Re-throw so the parent function can handle the UI
+            }
+        }
+
+
+        /**
+         * Renders the AI-specific results (chart, summary, pointers)
+         */
+        function renderAiResults(typePrefix, data) { // typePrefix is 'user', 'critical', or 'custom'
+             const translations = i18n[getSelectedLanguage()] || i18n["English"];
+             // Translate chart labels if needed
+             const chartLabels = [
+                 translations['pointer_good'] || 'Good',
+                 translations['pointer_bad'] || 'Bad',
+                 translations['pointer_neutral'] || 'Neutral'
+             ];
+             
+            // 1. Render Pie Chart
+            const chartData = [
+                data.sentiment_scores.good,
+                data.sentiment_scores.bad,
+                data.sentiment_scores.neutral
+            ];
+            renderAiChart(typePrefix, chartLabels, chartData);
+
+            // 2. Render AI Summary
+            document.getElementById(`${typePrefix}-ai-summary`).textContent = data.summary;
+
+            // 3. Render Pointers
+            const pointersList = document.getElementById(`${typePrefix}-pointers-list`);
+            pointersList.innerHTML = ''; 
+            
+            if (data.pointers.good && data.pointers.good.length > 0) {
+                pointersList.appendChild(createPointerEl(data.pointers.good.join(', '), 'Good', 'green'));
+            }
+            if (data.pointers.bad && data.pointers.bad.length > 0) {
+                pointersList.appendChild(createPointerEl(data.pointers.bad.join(', '), 'Bad', 'red'));
+            }
+            if (data.pointers.neutral && data.pointers.neutral.length > 0) {
+                pointersList.appendChild(createPointerEl(data.pointers.neutral.join(', '), 'Neutral', 'yellow'));
+            }
+            if (pointersList.innerHTML === '') {
+                pointersList.innerHTML = `<li class="text-gray-400">No specific aspects were identified.</li>`;
+            }
+        }
+
+        /**
+         * Renders the pie chart (Dark Mode)
+         */
+        function renderAiChart(typePrefix, chartLabels, chartData) {
+            const ctx = document.getElementById(`${typePrefix}-review-chart`).getContext('2d');
+            const legendColor = '#d1d5db'; // gray-300 for dark mode
+
+            if (chartInstances[typePrefix]) {
+                chartInstances[typePrefix].destroy();
+            }
+            
+            chartInstances[typePrefix] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: chartLabels, // Use translated labels
+                    datasets: [{
+                        label: '%', // Simplified label
+                        data: chartData,
+                        backgroundColor: [
+                            'rgba(74, 222, 128, 0.8)', // green-400
+                            'rgba(248, 113, 113, 0.8)', // red-400
+                            'rgba(250, 204, 21, 0.8)'  // yellow-400
+                        ],
+                        borderColor: [
+                            'rgba(74, 222, 128, 1)',
+                            'rgba(248, 113, 113, 1)',
+                            'rgba(250, 204, 21, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: legendColor,
+                            }
+                        },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return label;
+                                }
+                             }
+                        }
+                    }
+                }
+            });
+        }
+        
+        /**
+         * Creates the new, styled pointer list item (Dark Mode)
+         */
+        function createPointerEl(text, labelKey, color) {
+            const translations = i18n[getSelectedLanguage()] || i18n["English"];
+            // Dynamically translate the label (Good, Bad, Neutral)
+            const label = translations[`pointer_${labelKey.toLowerCase()}`] || labelKey;
+
+            const li = document.createElement('li');
+            li.className = `p-3 border-l-4 border-${color}-500 bg-gray-700 rounded-r-lg shadow-md`; // Added bg-gray-700 and shadow
+            li.innerHTML = `<strong class="font-semibold text-${color}-400">${label}:</strong> <span class="text-gray-300">${text}</span>`;
+            
+            // This is a Tailwind "JIT" (Just-in-Time) hack.
+            // Since the colors are dynamic, Tailwind might not have generated these classes.
+            // We can't *add* them, but we can set the style directly.
+            if (color === 'green') {
+                li.style.borderColor = '#34d399'; // border-green-500
+                li.querySelector('strong').style.color = '#6ee7b7'; // text-green-400
+            } else if (color === 'red') {
+                li.style.borderColor = '#ef4444'; // border-red-500
+                li.querySelector('strong').style.color = '#f87171'; // text-red-400
+            } else if (color === 'yellow') {
+                li.style.borderColor = '#f59e0b'; // border-yellow-500
+                li.querySelector('strong').style.color = '#facc15'; // text-yellow-400
+            }
+            
+            return li;
+        }
+
+         /**
+         * Translates the plot summary using Gemini
+         */
+        async function translatePlotSummary(plotText, targetLanguage) {
+            if (!plotText || plotText === "No plot summary available." || targetLanguage === 'English') {
+                return plotText; // No need to translate
+            }
+            
+            // Check cache first
+            if (plotTranslationCache[targetLanguage]) {
+                return plotTranslationCache[targetLanguage];
+            }
+
+            console.log(`Translating plot to ${targetLanguage}...`);
+            showPlotLoading(true);
+
+            const payload = {
+                contents: [{
+                    parts: [{
+                        text: `Translate the following movie plot summary into ${targetLanguage}. Output only the translated text, with no extra formatting or explanations:\n\n${plotText}`
+                    }]
+                }]
+            };
+
+            try {
+                const result = await callGeminiAPI(payload);
+                if (result && result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const translatedText = result.candidates[0].content.parts[0].text;
+                    plotTranslationCache[targetLanguage] = translatedText; // Cache result
+                    return translatedText;
+                } else {
+                    throw new Error("Invalid response from translation AI.");
+                }
+            } catch (error) {
+                console.error("Plot translation failed:", error);
+                showMessage('plot_translation_error', true);
+                return plotText; // Return original on error
+            } finally {
+                showPlotLoading(false);
+            }
+        }
+        
+        /**
+         * Helper function to maybe translate plot based on current state
+         */
+        async function maybeTranslatePlot() {
+            const targetLanguage = getSelectedLanguage();
+            if (currentMovieData && currentMovieData.plot && targetLanguage !== 'English') {
+                 // Use English plot from cache as source for translation
+                const sourcePlot = plotTranslationCache['English'] || currentMovieData.plot; 
+                const translatedPlot = await translatePlotSummary(sourcePlot, targetLanguage);
+                document.getElementById('movie-plot').textContent = translatedPlot;
+            } else if (currentMovieData) {
+                 // Ensure English plot is shown if selected or if original plot was missing
+                 document.getElementById('movie-plot').textContent = plotTranslationCache['English'] || "No plot summary available.";
+            }
+        }
+
+        /**
+         * Calls the Gemini API with exponential backoff.
+         */
+        async function callGeminiAPI(payload, retries = 3, delay = 1000) {
+            try {
+                if (!GEMINI_API_KEY || GEMINI_API_KEY === "PASTE_YOUR_GOOGLE_AI_STUDIO_KEY_HERE") {
+                    throw new Error(i18n['English']['error_api_key_missing']);
+                }
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    if (response.status === 429 && retries > 0) {
+                        console.warn("AI API rate limit hit. Retrying in " + delay + "ms");
+                        showMessage('error_api_rate_limit', true, delay, {delay: delay});
+                        await new Promise(res => setTimeout(res, delay));
+                        return callGeminiAPI(payload, retries - 1, delay * 2);
+                    }
+                    const errorBody = await response.text();
+                    console.error("AI API Error Body:", errorBody);
+                    // Try to parse error for more details
+                    let detail = '';
+                     try {
+                         const errJson = JSON.parse(errorBody);
+                         detail = errJson?.error?.message || errorBody;
+                     } catch(e) { detail = errorBody; }
+                     console.error("Detailed Error:", detail);
+                    throw new Error(i18n['English']['error_api_generic'].replace('{status}', response.status));
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("AI API call failed:", error);
+                showMessage(error.message, true); 
+                return null;
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // Add a listener to clear autocomplete if user clicks away
+        document.addEventListener('click', function(event) {
+            const searchInput = document.getElementById('movie-search-input');
+            const autocompleteList = document.getElementById('autocomplete-list');
+            const langButton = document.getElementById('language-dropdown-button');
+            const langPanel = document.getElementById('language-dropdown-panel');
+
+            if (searchInput && autocompleteList && !searchInput.contains(event.target) && !autocompleteList.contains(event.target)) {
+                clearAutocomplete();
+            }
+            // Close language dropdown if clicking outside
+             if (isDropdownOpen && langButton && langPanel && !langButton.contains(event.target) && !langPanel.contains(event.target)) {
+                 closeLanguageDropdown();
+             }
+        });
+        
+        // --- Re-analysis logic for language change ---
+        
+        // This function will re-run the *last* analysis with the *new* language
+        async function reAnalyzeForLanguageChange() {
+            // Get the currently active screen
+            const isInputScreen = !document.getElementById('input-screen').classList.contains('hidden');
+            
+            // ALWAYS translate static UI elements
+            translateUI();
+            
+            if (isInputScreen) {
+                // We are on the input screen, no AI calls needed
+                return;
+            }
+            
+            // We are on the results screen. Translate plot and re-run AI call.
+            
+            // Translate plot first (if applicable)
+            await maybeTranslatePlot();
+            
+            // Case 1: Custom Text Analysis was the last action
+            if (currentCustomReview) {
+                // Re-run handleCustomAnalysis
+                // Set the text back, but don't show the input screen
+                document.getElementById('review-text').value = currentCustomReview;
+                await handleCustomAnalysis(); // This will call runAiAnalysis with new lang
+            } 
+            // Case 2: Movie Search Analysis was the last action
+            else if (currentMovieData) {
+                // We need to re-run the AI portions for the movie.
+                // We do NOT need to call our backend again.
+                
+                // Clear old AI results (but keep movie info)
+                document.getElementById('user-results-content').classList.add('hidden');
+                document.getElementById('critical-results-content').classList.add('hidden');
+                document.getElementById('user-error-state').classList.add('hidden');
+                document.getElementById('critical-error-state').classList.add('hidden');
+                document.getElementById('critical-initial-state').classList.add('hidden');
+
+                // Re-run the appropriate AI analysis
+                if (currentMovieData.reviews && currentMovieData.reviews.length > 0) {
+                    // Movie HAD reviews. Re-run user analysis.
+                    document.getElementById('user-loading-state').classList.remove('hidden');
+                    document.getElementById('critical-initial-state').classList.remove('hidden'); // Show button
+                    
+                    const translations = i18n[getSelectedLanguage()] || i18n["English"];
+                    document.getElementById('user-review-count-info').textContent = translations['user_review_count_info'].replace('{count}', currentMovieData.reviews.length);
+
+                    // Re-run in background (no await)
+                    runAiAnalysis(currentMovieData.reviews, 'user');
+                    
+                } else {
+                    // Movie had NO reviews. Re-run deep search.
+                    document.getElementById('critical-loading-state').classList.remove('hidden');
+                    
+                    const translations = i18n[getSelectedLanguage()] || i18n["English"];
+                    document.getElementById('critical-review-count-info').textContent = translations['critical_review_count_info'].replace('{title}', currentMovieTitle);
+                    
+                    // Re-run in background (no await)
+                    triggerAiDeepSearch(true); // true = auto-run
+                }
+            }
+        }
+        
+        // Setup language dropdown button listener
+        document.getElementById('language-dropdown-button').addEventListener('click', toggleLanguageDropdown);
+        
+        // Initial setup on page load
+        populateLanguageDropdown();
+        translateUI(); // Initial translation
+    </script>
+</body>
+</html>
+
